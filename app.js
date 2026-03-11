@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsContainer = document.getElementById('resultsContainer');
     
     const soguPointsCard = document.getElementById('soguPointsCard');
-    const soguPointList = document.getElementById('soguPointList');
+    const soguResult = document.getElementById('soguResult');
 
     const kakaoResult = document.getElementById('kakaoResult');
     const instagramResult = document.getElementById('instagramResult');
@@ -223,14 +223,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if(resultsContainer) resultsContainer.style.display = 'flex';
         
         // Render Sogu Points
-        if (soguPointList && content.sogu_points && Array.isArray(content.sogu_points)) {
-            soguPointList.innerHTML = content.sogu_points.map(sp => `
-                <div class="sogu-card">
-                    <span class="sogu-number">${sp.id}</span>
-                    <h4>${sp.title}</h4>
-                    <p>${sp.desc}</p>
-                </div>
-            `).join('');
+        if (soguResult && content.sogu_points && Array.isArray(content.sogu_points)) {
+            const soguText = content.sogu_points.map(sp => `소구포인트 ${sp.id}: [${sp.title}] - ${sp.desc}`).join('\n');
+            soguResult.textContent = soguText;
             soguPointsCard.style.display = 'block';
         } else if (soguPointsCard) {
             soguPointsCard.style.display = 'none';
