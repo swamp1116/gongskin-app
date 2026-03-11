@@ -214,12 +214,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayResults(content) {
-        emptyState.style.display = 'none';
-        resultsContainer.style.display = 'flex';
+        if(emptyState) emptyState.style.display = 'none';
+        if(resultsContainer) resultsContainer.style.display = 'flex';
         
-        kakaoResult.textContent = content.kakao || '결과 없음';
-        instagramResult.textContent = content.instagram || '결과 없음';
-        shortformResult.textContent = content.shortform || '결과 없음';
+        if(kakaoResult) kakaoResult.textContent = content.kakao || '결과 없음';
+        if(instagramResult) instagramResult.textContent = content.instagram || '결과 없음';
+        if(shortformResult) shortformResult.textContent = content.shortform || '결과 없음';
     }
 
     // Copy to Clipboard
