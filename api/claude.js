@@ -86,7 +86,7 @@ URL에서 제품 정보를 먼저 분석하고, 성분이 없는 제품(생수, 
                 'anthropic-version': '2023-06-01'
             },
             body: JSON.stringify({
-                model: 'claude-3-5-sonnet-20241022',
+                model: 'claude-sonnet-4-5',
                 max_tokens: 1500,
                 system: systemPrompt,
                 messages: [
