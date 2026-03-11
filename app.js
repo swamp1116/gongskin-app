@@ -138,20 +138,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let base64Image = '';
             
-            // Handle Gemini generateContent API format (candidates > content > parts > inlineData)
-            if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
-                const parts = data.candidates[0].content.parts;
-                const imagePart = parts.find(p => p.inlineData && p.inlineData.data);
-                if (imagePart) {
-                    base64Image = imagePart.inlineData.data;
-                }
-            } 
-            // Fallback for former predict models
-            else if (data.predictions && data.predictions[0] && data.predictions[0].bytesBase64Encoded) {
+            // Handle Imagen 3 predict API format
+            if (data.predictions && data.predictions[0] && data.predictions[0].bytesBase64Encoded) {
                  base64Image = data.predictions[0].bytesBase64Encoded;
-            }
-
-            if (!base64Image) {
+            } else {
                  throw new Error('API 응답에 이미지 데이터가 없습니다.');
             }
 

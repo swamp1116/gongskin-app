@@ -39,8 +39,8 @@ Context: ${productContext}
 Style: bright, clean, minimalistic, k-beauty aesthetic, soft natural lighting, aesthetic props, white or pastel background, highly detailed, 4k resolution.`;
 
         // Direct fetch to Google Gemini REST API
-        // Using "gemini-2.0-flash-exp" with the "generateContent" endpoint
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+        // Using "imagen-3.0-generate-002" with the "predict" endpoint
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
 
         const geminiRes = await fetch(GEMINI_API_URL, {
             method: 'POST',
@@ -48,11 +48,11 @@ Style: bright, clean, minimalistic, k-beauty aesthetic, soft natural lighting, a
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: imagePrompt }]
-                }],
-                generationConfig: {
-                    responseModalities: ["IMAGE", "TEXT"]
+                instances: [
+                    { prompt: imagePrompt }
+                ],
+                parameters: {
+                    sampleCount: 1
                 }
             })
         });
