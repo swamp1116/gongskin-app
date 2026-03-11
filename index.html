@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공스킨(GONGSKIN) AI 마케터</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="toast" id="toast">복사되었습니다!</div>
+
+    <!-- API Key Modal -->
+    <div class="modal-overlay" id="apiModalOverlay">
+        <div class="modal">
+            <h2>API 설정</h2>
+            <p>보안을 위해 API 키는 브라우저 로컬 저장소에만 안전하게 보관됩니다.</p>
+            <div class="form-group">
+                <label for="apiKeyInput">Claude API Key</label>
+                <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="closeModalBtn">닫기</button>
+                <button class="btn btn-primary" id="saveApiKeyBtn">저장하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo-area">
+                <h1>GONGSKIN</h1>
+                <span class="badge">AI MARKETER</span>
+            </div>
+            <button class="icon-btn" id="openSettingsBtn" title="API 설정" aria-label="API 설정">
+                <span class="material-icons">settings</span>
+            </button>
+        </header>
+
+        <main class="main-content">
+            <div class="two-columns">
+                <!-- Left Column: Input Form -->
+                <section class="input-section card fade-in">
+                    <h2 class="section-title">제품 정보 입력</h2>
+                    <form id="productForm">
+                        <div class="form-group">
+                            <label for="productUrl">제품 URL</label>
+                            <input type="url" id="productUrl" placeholder="예: https://gongskin.co.kr/product/..." required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full" id="generateBtn">
+                            <span class="btn-text">콘텐츠 생성하기</span>
+                            <span class="spinner" style="display: none;"></span>
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Right Column: Output Results -->
+                <section class="output-section">
+                    <div id="emptyState" class="empty-state">
+                        <span class="material-icons">auto_awesome</span>
+                        <p>제품 정보를 입력하고 생성 버튼을 누르시면<br>공스킨 전용 마케팅 콘텐츠가 생성됩니다.</p>
+                    </div>
+
+                    <div id="resultsContainer" class="results-container" style="display: none;">
+                        
+                        <!-- Kakao Output -->
+                        <div class="result-card slide-up" style="animation-delay: 0.1s;">
+                            <div class="result-header">
+                                <div class="result-title">
+                                    <span class="material-icons text-yellow">chat_bubble</span>
+                                    <h3>카카오 채널 메시지</h3>
+                                </div>
+                                <button class="icon-btn copy-btn" data-target="kakaoResult" title="복사하기">
+                                    <span class="material-icons">content_copy</span>
+                                </button>
+                            </div>
+                            <div class="result-body" id="kakaoResult"></div>
+                        </div>
+
+                        <!-- Instagram Output -->
+                        <div class="result-card slide-up" style="animation-delay: 0.2s;">
+                            <div class="result-header">
+                                <div class="result-title">
+                                    <span class="material-icons text-pink">photo_camera</span>
+                                    <h3>인스타그램 캡션</h3>
+                                </div>
+                                <button class="icon-btn copy-btn" data-target="instagramResult" title="복사하기">
+                                    <span class="material-icons">content_copy</span>
+                                </button>
+                            </div>
+                            <div class="result-body" id="instagramResult"></div>
+                        </div>
+
+                        <!-- Shortform Output -->
+                        <div class="result-card slide-up" style="animation-delay: 0.3s;">
+                            <div class="result-header">
+                                <div class="result-title">
+                                    <span class="material-icons text-blue">video_library</span>
+                                    <h3>숏폼 스크립트 (15초)</h3>
+                                </div>
+                                <button class="icon-btn copy-btn" data-target="shortformResult" title="복사하기">
+                                    <span class="material-icons">content_copy</span>
+                                </button>
+                            </div>
+                            <div class="result-body" id="shortformResult"></div>
+                        </div>
+
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
