@@ -39,24 +39,20 @@ Context: ${productContext}
 Style: bright, clean, minimalistic, k-beauty aesthetic, soft natural lighting, aesthetic props, white or pastel background, highly detailed, 4k resolution.`;
 
         // Direct fetch to Google Gemini REST API
-        // Endpoint structure typical for Gemini Models (Image Generation uses :predict):
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:predict?key=${apiKey}`;
+        // Using "gemini-2.0-flash-exp" with the "generateContent" endpoint
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
 
-        // Note: The structure requires 'instances' with 'prompt'
         const geminiRes = await fetch(GEMINI_API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                instances: [
-                    {
-                        prompt: imagePrompt
-                    }
-                ],
-                parameters: {
-                    sampleCount: 1,
-                    aspectRatio: "1:1"
+                contents: [{
+                    parts: [{ text: imagePrompt }]
+                }],
+                generationConfig: {
+                    responseModalities: ["IMAGE", "TEXT"]
                 }
             })
         });
