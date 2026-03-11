@@ -33,17 +33,14 @@ export default async function handler(req, res) {
             return;
         }
 
-        // 1. Scrape the URL content (Direct Fetch on Backend)
+        // 1. Scrape the URL content (Deep Crawling)
         let parsedInfo = {
             title: '',
             price: '',
-            description: '',
-            rawText: ''
+            fullText: ''
         };
 
         try {
-            // Fetch directly from the server (bypassing browser CORS) 
-            // Mocking User-Agent helps bypass basic bot protections like Naver SmartStore
             const pageRes = await fetch(productUrl, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -52,80 +49,79 @@ export default async function handler(req, res) {
             });
             const html = await pageRes.text();
 
-            // 1) Extract Meta Tags (og:title, og:description)
+            // Extract basic meta tags
             const getMeta = (name) => {
                 const regex = new RegExp(`<meta[^>]*(?:property|name)=["']${name}["'][^>]*content=["']([^"']+)["']`, 'i');
                 const match = html.match(regex);
                 return match ? match[1] : '';
             };
 
-            parsedInfo.title = getMeta('og:title') || getMeta('twitter:title');
-            if (!parsedInfo.title) {
-                const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
-                if (titleMatch) parsedInfo.title = titleMatch[1].trim();
-            }
+            parsedInfo.title = getMeta('og:title') || html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim() || '';
+            parsedInfo.price = getMeta('product:price:amount') || '';
 
-            parsedInfo.description = getMeta('og:description') || getMeta('twitter:description');
-            parsedInfo.price = getMeta('product:price:amount'); // Standard e-commerce meta tag
-
-            // 2) Extract JSON-LD (Schema.org) for accurate product info (Price, Name, etc)
-            const ldJsonRegex = /<script type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/gi;
-            let ldMatch;
-            while ((ldMatch = ldJsonRegex.exec(html)) !== null) {
-                try {
-                    const ldData = JSON.parse(ldMatch[1]);
-                    const items = Array.isArray(ldData) ? ldData : [ldData];
-                    for (const item of items) {
-                        if (item.name && !parsedInfo.title) parsedInfo.title = item.name;
-                        if (item.description && !parsedInfo.description) parsedInfo.description = item.description;
-                        if (item.offers && item.offers.price) {
-                            parsedInfo.price = item.offers.price;
-                        } else if (item.offers && item.offers[0] && item.offers[0].price) {
-                            parsedInfo.price = item.offers[0].price;
-                        }
-                    }
-                } catch(e) {
-                    // Ignore JSON parsing errors for individual blocks
-                }
-            }
-
-            // 3) Extract raw text from body as fallback for Ingredients / Detailed features
+            // Deep text extraction including alt tags
             let bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
             let bodyHtml = bodyMatch ? bodyMatch[1] : html;
             
+            // Remove scripts and styles
             bodyHtml = bodyHtml.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ');
             bodyHtml = bodyHtml.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ');
-            bodyHtml = bodyHtml.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, ' ');
             
-            let text = bodyHtml.replace(/<[^>]+>/g, ' '); // Strip all remaining tags
-            parsedInfo.rawText = text.replace(/\s+/g, ' ').trim().substring(0, 3000); // 3000 chars
+            // Extract alt tags from images before stripping tags to preserve image context
+            const altRegex = /<img[^>]*alt=["']([^"']+)["'][^>]*>/gi;
+            let altTexts = [];
+            let altMatch;
+            while ((altMatch = altRegex.exec(bodyHtml)) !== null) {
+                if (altMatch[1].trim()) altTexts.push(altMatch[1].trim());
+            }
+
+            // Strip remaining HTML
+            let text = bodyHtml.replace(/<[^>]+>/g, ' '); 
+            
+            // Combine visible text + ALT text (which often contains the detailed long-image copy)
+            let combinedText = text + "\n[이미지 텍스트 정보]\n" + altTexts.join(" ");
+            parsedInfo.fullText = combinedText.replace(/\s+/g, ' ').trim().substring(0, 15000); // 15,000 chars for deep context
 
         } catch (scrapeErr) {
-            console.error("Scrape warning:", scrapeErr);
+            console.error("Scrape error:", scrapeErr);
         }
 
         const pageContext = `
-[파싱된 웹페이지 정보]
-- 상품명: ${parsedInfo.title || '알 수 없음'}
-- 가격: ${parsedInfo.price ? parsedInfo.price + '원' : '알 수 없음'}
-- 상품설명(메타): ${parsedInfo.description || '없음'}
-- 상세 텍스트(성분/특징 유추용): ${parsedInfo.rawText || '가져올 수 없음'}
+[웹페이지 정보 수집본]
+- 상품명 추출: ${parsedInfo.title}
+- 가격 추출: ${parsedInfo.price}
+- 전체 상세페이지 내용 (성분/효능/용량/사용법 포함):
+${parsedInfo.fullText}
         `.trim();
 
         // 2. Prepare Claude Prompt
-        const systemPrompt = `당신은 공스킨 전용 콘텐츠 AI입니다. 
+        const systemPrompt = `당신은 공스킨 브랜드(가성비, 성분 중심 화장품)의 최고 마케터입니다. 
 포지셔닝: 성분 좋은 화장품을 말도 안 되는 가격에.
 톤: 직접적, 가격 먼저, 옆집 언니 느낌.
 절대 쓰지 말 것: 럭셔리, 프리미엄, 기적, 완벽.
 
-제공된 '[파싱된 웹페이지 정보]'를 바탕으로 제품의 이름, 가격, 성분, 특징을 정확히 추출하여 콘텐츠를 작성하세요.
-만약 성분이 없는 제품(일반 생수, 향수 등)이라면 성분 대신 '주요 특징'이나 '활용 용도'를 강조해서 콘텐츠를 생성하세요.
+[수행 지시사항]
+1. 제공된 [웹페이지 정보 수집본]을 심층 분석하여 제품명, 가격, 용량, 전체 성분, 효능, 사용법을 파악하세요.
+2. 분석된 정보를 바탕으로 마케팅에서 가장 강력하게 작용할 **핵심 소구포인트 3가지**를 먼저 도출하세요.
+3. 도출한 소구포인트를 기반으로 채널별 콘텐츠를 작성하세요.
+   - kakao: 가격 충격 소구 (2~3줄)
+   - instagram: 성분/효능 소구 (캡션 + 해시태그 20개)
+   - shortform: 사용 전후 스토리 소구 (15초 숏폼 스크립트)
 
-사용자가 제품 URL을 제공하면, 반드시 아래 JSON 형식으로만 응답하세요. (마크다운 백틱 없이 순수 JSON만 반환)
+반드시 아래 JSON 형식으로만 응답하세요.
 {
-    "kakao": "카카오 채널 메시지 (2~3줄, 가격 먼저)",
-    "instagram": "인스타그램 캡션 + 해시태그 20개",
-    "shortform": "숏폼 스크립트 15초 버전"
+    "sogu_points": [
+        {
+            "id": 1,
+            "title": "첫 번째 소구포인트 제목",
+            "desc": "한 줄 설명"
+        },
+        { "id": 2, "title": "...", "desc": "..." },
+        { "id": 3, "title": "...", "desc": "..." }
+    ],
+    "kakao": "...",
+    "instagram": "...",
+    "shortform": "..."
 }`;
 
         const userPrompt = `제품 URL: ${productUrl}\n\n${pageContext}\n\n위 제품 정보를 바탕으로 마케팅 콘텐츠를 작성해주세요.`;

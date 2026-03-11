@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const emptyState = document.getElementById('emptyState');
     const resultsContainer = document.getElementById('resultsContainer');
     
+    const soguPointsCard = document.getElementById('soguPointsCard');
+    const soguPointList = document.getElementById('soguPointList');
+
     const kakaoResult = document.getElementById('kakaoResult');
     const instagramResult = document.getElementById('instagramResult');
     const shortformResult = document.getElementById('shortformResult');
@@ -219,6 +222,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if(emptyState) emptyState.style.display = 'none';
         if(resultsContainer) resultsContainer.style.display = 'flex';
         
+        // Render Sogu Points
+        if (soguPointList && content.sogu_points && Array.isArray(content.sogu_points)) {
+            soguPointList.innerHTML = content.sogu_points.map(sp => `
+                <div class="sogu-card">
+                    <span class="sogu-number">${sp.id}</span>
+                    <h4>${sp.title}</h4>
+                    <p>${sp.desc}</p>
+                </div>
+            `).join('');
+            soguPointsCard.style.display = 'block';
+        } else if (soguPointsCard) {
+            soguPointsCard.style.display = 'none';
+        }
+
         if(kakaoResult) kakaoResult.textContent = content.kakao || '결과 없음';
         if(instagramResult) instagramResult.textContent = content.instagram || '결과 없음';
         if(shortformResult) shortformResult.textContent = content.shortform || '결과 없음';
