@@ -104,11 +104,30 @@ URL에서 제품 정보를 먼저 분석하고, 성분이 없는 제품(생수, 
         const claudeData = await claudeRes.json();
         const textContent = claudeData.content?.[0]?.text || '';
         
-        // Clean markdown backticks if Claude returns them
-        const cleanedText = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
-        const resultJson = JSON.parse(cleanedText);
+        // Robust JSON extraction
+        // Find the first '{' and the last '}' to extract only the JSON object
+        let jsonString = textContent;
+        const startIndex = textContent.indexOf('{');
+        const endIndex = textContent.lastIndexOf('}');
         
-        res.status(200).json(resultJson);
+        if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+            jsonString = textContent.substring(startIndex, endIndex + 1);
+        } else {
+            // Clean markdown backticks as a fallback
+            jsonString = textContent.replace(/```json/gi, '').replace(/```/g, '').trim();
+        }
+
+        try {
+            const resultJson = JSON.parse(jsonString);
+            res.status(200).json(resultJson);
+        } catch (parseError) {
+            console.error("Claude JSON Parse Error:", parseError, "Raw Response:", textContent);
+            res.status(500).json({ 
+                error: 'Claude가 반환한 결과를 처리할 수 없습니다.',
+                details: parseError.message,
+                rawResponse: textContent
+            });
+        }
 
     } catch (err) {
         console.error("Vercel API Error:", err);
