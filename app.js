@@ -6,20 +6,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModalBtn = document.getElementById('closeModalBtn');
     const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
     const apiKeyInput = document.getElementById('apiKeyInput');
-    const googleApiKeyInput = document.getElementById('googleApiKeyInput');
     
     const productForm = document.getElementById('productForm');
     const generateBtn = document.getElementById('generateBtn');
     const btnText = generateBtn.querySelector('.btn-text');
-    const spinner = generateBtn.querySelector('.spinner');
-    
-    const generateImageBtn = document.getElementById('generateImageBtn');
-    const imgBtnText = generateImageBtn.querySelector('.btn-text');
-    const imgSpinner = document.querySelector('.spinner-img');
+    const spinner = document.getElementById('mainSpinner');
+    const loadingText = document.getElementById('loadingText');
     
     const emptyState = document.getElementById('emptyState');
     const resultsContainer = document.getElementById('resultsContainer');
     
+    const snsStrategyCard = document.getElementById('snsStrategyCard');
+    const snsStrategyResult = document.getElementById('snsStrategyResult');
+
     const soguPointsCard = document.getElementById('soguPointsCard');
     const soguResult = document.getElementById('soguResult');
 
@@ -29,30 +28,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyBtns = document.querySelectorAll('.copy-btn');
     const toast = document.getElementById('toast');
 
-    const imageResultContainer = document.getElementById('imageResultContainer');
-    const generatedImage = document.getElementById('generatedImage');
-
     const STORAGE_KEY = 'gongskin_claude_api_key';
-    const GOOGLE_STORAGE_KEY = 'gongskin_google_api_key';
-
-    // To store context for image generation
-    let currentProductContext = '';
 
     // Initialize Modal and API Key
     const savedKey = localStorage.getItem(STORAGE_KEY);
-    const savedGoogleKey = localStorage.getItem(GOOGLE_STORAGE_KEY);
     
     if (!savedKey) {
         // Show modal on first load if no key
         apiModalOverlay.classList.add('active');
     } else {
         apiKeyInput.value = savedKey;
-        googleApiKeyInput.value = savedGoogleKey || '';
     }
 
     openSettingsBtn.addEventListener('click', () => {
         apiKeyInput.value = localStorage.getItem(STORAGE_KEY) || '';
-        googleApiKeyInput.value = localStorage.getItem(GOOGLE_STORAGE_KEY) || '';
         apiModalOverlay.classList.add('active');
     });
 
@@ -62,14 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveApiKeyBtn.addEventListener('click', () => {
         const key = apiKeyInput.value.trim();
-        const googleKey = googleApiKeyInput.value.trim();
         if (key) {
             localStorage.setItem(STORAGE_KEY, key);
-            
-            if (googleKey) {
-                localStorage.setItem(GOOGLE_STORAGE_KEY, googleKey);
-            }
-            
             apiModalOverlay.classList.remove('active');
             showToast('API 키 설정이 저장되었습니다.');
         } else {
@@ -91,75 +74,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const productUrl = document.getElementById('productUrl').value.trim();
 
         setLoadingState(true);
-        generateImageBtn.disabled = true;
 
         try {
             const content = await generateMarketingContent(apiKey, productUrl);
-            currentProductContext = content.kakao + " " + content.instagram;
             displayResults(content);
-            generateImageBtn.disabled = false;
         } catch (error) {
             console.error('Error:', error);
             alert(`오류가 발생했습니다: ${error.message}\nAPI 키가 올바른지 확인해주세요.`);
         } finally {
             setLoadingState(false);
-        }
-    });
-
-    // Handle Image Generation
-    generateImageBtn.addEventListener('click', async () => {
-        const googleKey = localStorage.getItem(GOOGLE_STORAGE_KEY);
-        if (!googleKey) {
-            alert('설정 메뉴(우측 상단 톱니바퀴)에서 Google Gemini API 키를 먼저 설정해주세요.');
-            apiModalOverlay.classList.add('active');
-            return;
-        }
-
-        const productUrl = document.getElementById('productUrl').value.trim();
-        
-        setImageLoadingState(true);
-
-        try {
-            const response = await fetch('/api/image', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-google-api-key': googleKey
-                },
-                body: JSON.stringify({ 
-                    productUrl: productUrl,
-                    productContext: currentProductContext 
-                })
-            });
-
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error || `이미지 서버 오류 (${response.status})`);
-            }
-
-            const data = await response.json();
-            
-            let base64Image = '';
-            
-            // Handle Imagen 3 predict API format
-            if (data.predictions && data.predictions[0] && data.predictions[0].bytesBase64Encoded) {
-                 base64Image = data.predictions[0].bytesBase64Encoded;
-            } else {
-                 throw new Error('API 응답에 이미지 데이터가 없습니다.');
-            }
-
-            // Display Image
-            imageResultContainer.style.display = 'flex';
-            generatedImage.style.display = 'block';
-            generatedImage.src = `data:image/jpeg;base64,${base64Image}`;
-
-            showToast('이미지가 성공적으로 생성되었습니다!');
-            
-        } catch (error) {
-            console.error('Image Error:', error);
-            alert(`이미지 생성 실패: ${error.message}`);
-        } finally {
-            setImageLoadingState(false);
         }
     });
 
@@ -189,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLoading) {
             btnText.style.display = 'none';
             spinner.style.display = 'inline-block';
+            loadingText.style.display = 'inline-block';
             emptyState.style.display = 'flex';
             resultsContainer.style.display = 'none';
             // Re-trigger animations
@@ -201,20 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             btnText.style.display = 'inline-block';
             spinner.style.display = 'none';
-        }
-    }
-
-    function setImageLoadingState(isLoading) {
-        generateImageBtn.disabled = isLoading;
-        if (isLoading) {
-            imgBtnText.style.display = 'none';
-            imgSpinner.style.display = 'inline-block';
-            // Also enforce class for rotation just in case
-            imgSpinner.classList.add('spinner'); 
-        } else {
-            imgBtnText.style.display = 'inline-block';
-            imgSpinner.style.display = 'none';
-            imgSpinner.classList.remove('spinner');
+            loadingText.style.display = 'none';
         }
     }
 
@@ -222,15 +133,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if(emptyState) emptyState.style.display = 'none';
         if(resultsContainer) resultsContainer.style.display = 'flex';
         
-        // Render Sogu Points
-        if (soguResult && content.sogu_points && Array.isArray(content.sogu_points)) {
-            const soguText = content.sogu_points.map(sp => `소구포인트 ${sp.id}: [${sp.title}] - ${sp.desc}`).join('\n');
-            soguResult.textContent = soguText;
-            soguPointsCard.style.display = 'block';
-        } else if (soguPointsCard) {
-            soguPointsCard.style.display = 'none';
-        }
-
+        // Render 5 Elements
+        if(snsStrategyResult) snsStrategyResult.textContent = content.sns_strategy || '결과 없음';
+        if(soguResult) soguResult.textContent = content.sogu_points || '결과 없음';
         if(kakaoResult) kakaoResult.textContent = content.kakao || '결과 없음';
         if(instagramResult) instagramResult.textContent = content.instagram || '결과 없음';
         if(shortformResult) shortformResult.textContent = content.shortform || '결과 없음';
@@ -244,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const textToCopy = element.textContent;
             
             navigator.clipboard.writeText(textToCopy).then(() => {
-                showToast('텍스트가 클립보드에 복사되었습니다!');
+                showToast('복사됨!');
             }).catch(err => {
                 console.error('Copy failed', err);
                 alert('복사에 실패했습니다.');
